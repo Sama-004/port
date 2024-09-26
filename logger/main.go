@@ -1,14 +1,26 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	hook "github.com/robotn/gohook"
 )
 
 var leftClickCount, rightClickCount, keyPress int
+
+type chartinfo struct {
+	id         int
+	leftclick  int
+	rightlcick int
+	keypress   int
+	time       string
+}
 
 func logger(event chan hook.Event) {
 	leftClickChan := make(chan int)
@@ -49,10 +61,28 @@ func logger(event chan hook.Event) {
 }
 
 func updateDb() {
-	//also need time here. Time should be date and time.
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading the env file")
+	}
+	dbUrl := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	err = db.Ping()
 	currentTime := time.Now().Format("2006-01-02 15:04")
 	log.Printf("Updating database with LeftClick: %d Rightclick: %d Keypress: %d Time: %s\n", leftClickCount, rightClickCount, keyPress, currentTime)
-	// db logic goes here
+	query := `
+	insert into chartinfo (leftclick,rightclick,keypress,time)
+	values($1,$2,$3,$4)
+	`
+	_, err = db.Exec(query, leftClickCount, rightClickCount, keyPress, currentTime)
+	if err != nil {
+		log.Fatalf("Error inserting data into the database: %v", err)
+	}
+	log.Printf("Successfully updated the database with LeftClick: %d Rightclick: %d Keypress: %d Time: %s", leftClickCount, rightClickCount, keyPress, currentTime)
 	// what happens when failed to update the db??? store the count with time in array and try to write later??
 	//after db write reset the counts
 	leftClickCount = 0
@@ -67,7 +97,7 @@ func main() {
 	defer hook.End()
 	go logger(eventChan)
 	//1*time.Hour here
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
