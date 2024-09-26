@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -13,6 +14,8 @@ import (
 )
 
 var leftClickCount, rightClickCount, keyPress int
+var failedWrites []chartinfo
+var mu sync.Mutex
 
 type chartinfo struct {
 	id         int
@@ -49,13 +52,13 @@ func logger(event chan hook.Event) {
 		select {
 		case <-leftClickChan:
 			leftClickCount++
-			fmt.Printf("Left Click count: %d\n", leftClickCount)
+			// fmt.Printf("Left Click count: %d\n", leftClickCount)
 		case <-rightClickChan:
 			rightClickCount++
-			fmt.Printf("Right click count:%d\n", rightClickCount)
+			// fmt.Printf("Right click count:%d\n", rightClickCount)
 		case <-keyPressChan:
 			keyPress++
-			fmt.Printf("Key press count: %d\n", keyPress)
+			// fmt.Printf("Key press count: %d\n", keyPress)
 		}
 	}
 }
@@ -63,12 +66,14 @@ func logger(event chan hook.Event) {
 func updateDb() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Error loading the env file")
+		log.Printf("Error loading the env file")
+		return
 	}
 	dbUrl := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error opening the database connection %v", err)
+		return
 	}
 	defer db.Close()
 	err = db.Ping()
@@ -80,15 +85,52 @@ func updateDb() {
 	`
 	_, err = db.Exec(query, leftClickCount, rightClickCount, keyPress, currentTime)
 	if err != nil {
-		log.Fatalf("Error inserting data into the database: %v", err)
+		log.Printf("Error inserting data into the database: %v", err)
+		mu.Lock()
+		failedWrites = append(failedWrites, chartinfo{
+			leftclick:  leftClickCount,
+			rightlcick: rightClickCount,
+			keypress:   keyPress,
+			time:       currentTime,
+		})
+		// reset the count to 0 to start logging events for another time interval
+		// can be a better way to do this idk
+		leftClickCount = 0
+		rightClickCount = 0
+		keyPress = 0
+		mu.Unlock()
+	} else {
+		log.Printf("Successfully updated the database with LeftClick: %d Rightclick: %d Keypress: %d Time: %s", leftClickCount, rightClickCount, keyPress, currentTime)
+		leftClickCount = 0
+		rightClickCount = 0
+		keyPress = 0
+		fmt.Printf("Reset counts Leftclick: %d Rightclick: %d, keypress: %d\n", leftClickCount, rightClickCount, keyPress)
 	}
-	log.Printf("Successfully updated the database with LeftClick: %d Rightclick: %d Keypress: %d Time: %s", leftClickCount, rightClickCount, keyPress, currentTime)
-	// what happens when failed to update the db??? store the count with time in array and try to write later??
-	//after db write reset the counts
-	leftClickCount = 0
-	rightClickCount = 0
-	keyPress = 0
-	fmt.Printf("Reset counts Leftclick: %d Rightclick: %d, keypress: %d\n", leftClickCount, rightClickCount, keyPress)
+	//retry when there is a successfull connection
+	retryfailedWrites(db)
+}
+
+func retryfailedWrites(db *sql.DB) {
+	mu.Lock()
+	defer mu.Unlock()
+	fmt.Println(failedWrites)
+	for i := 0; i < len(failedWrites); i++ {
+		failedData := failedWrites[i]
+		fmt.Println(failedData)
+		query := `
+	insert into chartinfo (leftclick,rightclick,keypress,time)
+	values($1,$2,$3,$4)
+	`
+		_, err := db.Exec(query, failedData.leftclick, failedData.rightlcick, failedData.keypress, failedData.time)
+		if err != nil {
+			log.Printf("Write retry failed for data %v\n", failedData, err)
+		} else {
+			log.Printf("Write retry successful for data %v \n", failedData)
+			failedWrites = append(failedWrites[:i], failedWrites[i+1:]...)
+			i--
+			fmt.Println(failedWrites)
+		}
+	}
 }
 
 func main() {
