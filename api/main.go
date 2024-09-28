@@ -44,6 +44,16 @@ func getChartinfo(db *sql.DB) ([]chartinfo, error) {
 
 func chartInfoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")             // Allow all origins, or specify a specific origin
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS") // Allow GET and OPTIONS methods
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type") // Allow the Content-Type header
+
+		// Handle preflight (OPTIONS) request
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 		chartData, err := getChartinfo(db)
 		if err != nil {
 			http.Error(w, "Failed to fetch chart info", http.StatusInternalServerError)
