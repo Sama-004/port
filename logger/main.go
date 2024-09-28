@@ -77,7 +77,7 @@ func updateDb() {
 	}
 	defer db.Close()
 	err = db.Ping()
-	currentTime := time.Now().Format("2006-01-02 15:04")
+	currentTime := time.Now().UTC().Format("2006-01-02 15:04")
 	log.Printf("Updating database with LeftClick: %d Rightclick: %d Keypress: %d Time: %s\n", leftClickCount, rightClickCount, keyPress, currentTime)
 	query := `
 	insert into chartinfo (leftclick,rightclick,keypress,time)
@@ -138,8 +138,8 @@ func main() {
 	eventChan := hook.Start()
 	defer hook.End()
 	go logger(eventChan)
-	//1*time.Hour here
-	ticker := time.NewTicker(30 * time.Second)
+	//TODO:1*time.Hour here
+	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 	for {
 		select {
