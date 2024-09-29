@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Terminal, BarChart2 } from 'lucide-react';
+import { Terminal, LineChart as LineChartIcon } from 'lucide-react';
+import ActivityChart from './components/activity-chart';
+import useSWR from 'swr';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function PersonalWebsite() {
-  const [blinkCursor, setBlinkCursor] = useState(true);
+  const { data, isLoading } = useSWR(
+    'http://localhost:8080/chartinfo',
+    fetcher,
+  );
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBlinkCursor((prev) => !prev);
-    }, 530);
-    return () => clearInterval(interval);
-  }, []);
+  if (isLoading) return <div>loading...</div>;
 
   return (
     <div className="h-screen bg-gray-900 text-green-500 font-mono flex flex-col">
@@ -17,40 +18,30 @@ export default function PersonalWebsite() {
         <div className="bg-gray-700 p-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Terminal size={16} />
-            <span className="text-sm">samanyuroy@gmail.com</span>
           </div>
-          {/*Neovim svg here*/}
-          VIM LOGO GOES HERE
         </div>
 
         <div className="flex-grow overflow-auto p-4 bg-gray-800">
-          <div className="mb-4">
-            <span className="text-green-400">$</span> cat welcome.txt
-          </div>
           <div className="mb-8">
-            Welcome to my personal website! I'm a developer who loves Linux and
-            Vim. Explore my projects and get in touch if you'd like to
-            collaborate.
+            Lorem ipsum dolor, sit amet consectetur adipisicing elit. Distinctio
+            at qui quam mollitia aut sapiente nemo vel asperiores, minus
+            corporis!
           </div>
           <div>Blogs (if i write any)</div>
           <div>Other pages links would go here maybe</div>
 
           <div className="bg-gray-700 p-4 rounded-lg mb-8">
-            <div className="flex items-center space-x-2 mb-2 h-[500px]">
-              <BarChart2 size={20} />
-              <h2 className="text-lg font-bold">Activity Chart</h2>
+            <div className="flex items-center space-x-2 mb-2">
+              <LineChartIcon size={20} />
+              <h2 className="text-lg font-bold">my activity</h2>
             </div>
-            <div className="flex items-center justify-center border border-dashed border-green-500 rounded">
-              Chart coming soon...
+            <div className="w-full md:h-[300px] sm:h-[200px]">
+              <ActivityChart data={data} />
             </div>
-          </div>
-
-          <div className="flex items-center">
-            <span className="text-green-400">$</span>
-            <span className="ml-2">{blinkCursor ? '|' : ' '}</span>
           </div>
         </div>
       </div>
+
       {/* Status bar */}
       <footer className="bg-green-500 text-gray-900 p-1 text-sm">
         <div className="flex justify-between items-center">
