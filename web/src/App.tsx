@@ -6,7 +6,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function PersonalWebsite() {
   const { data, isLoading } = useSWR(
-    'http://localhost:8080/chartinfo',
+    `${import.meta.env.VITE_BACKEND_URL}`,
     fetcher,
   );
 

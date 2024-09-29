@@ -25,15 +25,15 @@ interface ActivityChartProps {
 const chartConfig = {
   leftclick: {
     label: 'Left Click',
-    color: 'hsl(var(--chart-1))',
+    color: '#FFFF00',
   },
   rightclick: {
     label: 'Right Click',
-    color: 'hsl(var(--chart-2))',
+    color: '#0000FF',
   },
   keypress: {
     label: 'Key Press',
-    color: 'hsl(var(--chart-3))',
+    color: '#FFA500',
   },
 } satisfies ChartConfig;
 
@@ -66,7 +66,6 @@ export default function ActivityChart({ data }: ActivityChartProps) {
     };
   });
 
-  console.log(chartData);
   return (
     <ChartContainer
       config={chartConfig}
