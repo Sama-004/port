@@ -1,0 +1,13 @@
+name: Hit Chart Info API every 10 minutes
+
+on:
+  schedule:
+    # Runs every 10 minutes
+    - cron: '*/10 * * * *'
+
+jobs:
+  hit-url:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make a request to the Chart Info API
+        run: curl -X GET https://port-o4mh.onrender.com/chartinfo
